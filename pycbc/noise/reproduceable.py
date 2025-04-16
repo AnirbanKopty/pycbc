@@ -131,7 +131,7 @@ def colored_noise(psd, start_time, end_time,
             psd.data[i] = max_val
 
     fil_len = int(filter_duration * sample_rate)
-    wn_dur = int(end_time - start_time) + 2 * filter_duration
+    wn_dur = end_time - start_time + 2 * filter_duration
     if psd.delta_f >= 1. / (2.*filter_duration):
         # If the PSD is short enough, this method is less memory intensive than
         # resizing and then calling inverse_spectrum_truncation

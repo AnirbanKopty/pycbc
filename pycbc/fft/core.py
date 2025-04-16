@@ -99,7 +99,7 @@ def _check_fwd_args(invec, itype, outvec, otype, nbatch, size):
     if nbatch < 1:
         raise ValueError("nbatch must be >= 1")
     if (nbatch > 1) and size is not None:
-        raise ValueError("When nbatch > 1, size cannot be 'None'")
+        raise ValueError("When nbatch > 1, size should be 'None'")
     if size is None:
         size = ilen
     inplace = (invec.ptr == outvec.ptr)
@@ -274,4 +274,3 @@ class _BaseIFFT(object):
         or delta_f (when input is a FrequencySeries).
         """
         pass
-
