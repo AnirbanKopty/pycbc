@@ -168,7 +168,7 @@ def matched_filter_twodet(data1, data2, psd1=None, psd2=None, low_frequency_cuto
     else:
         raise TypeError("PSD must be a FrequencySeries")
 
-    ifft(qtilde, _q)
+    fft(qtilde, _q)
 
     norm_twodet = sigmasq_twodet(psd1, psd2, low_frequency_cutoff, high_frequency_cutoff)
 
