@@ -100,7 +100,12 @@ def matched_filter_core_different_psds(template, data, psd1=None, psd2=None, low
            norm)
 
 
-def inner_product_twodet(A, B, psd1, psd2):
+def variance_term(psd1, psd2, template1, relative_amplification):
+    term1 = 2 * template1**2 * ( relative_amplification * psd1 + psd2 )
+    term2 = 1/psd1.delta_f * psd1 * psd2
+    return term1 + term2
+
+def inner_product_twodet(A, B, psd1, psd2, template1, relative_amplification):
     """ Return the inner product of the array with complex conjugation.
     """
     cdtype = common_kind(A.dtype, B.dtype)
@@ -109,14 +114,13 @@ def inner_product_twodet(A, B, psd1, psd2):
     else:
         acum_dtype = float64
 
-    return numpy.sum(A.data.conj() * B.data / (psd1.data * psd2.data), dtype=acum_dtype)
+    return numpy.sum(A.data.conj() * B.data / (variance_term(psd1, psd2, template1, relative_amplification).data), dtype=acum_dtype)
 
 
-
-def sigmasq_twodet(psd1=None, psd2=None, low_frequency_cutoff=None, high_frequency_cutoff=None):
+def sigmasq_twodet(psd1=None, psd2=None, template1=None, relative_amplification=1.0, low_frequency_cutoff=None, high_frequency_cutoff=None):
     frequencies = psd1.sample_frequencies
     N = (len(psd1)-1) * 2
-    norm = 8.0 * psd1.delta_f**2
+    norm = 8.0 * psd1.delta_f
     kmin, kmax = get_cutoff_indices(low_frequency_cutoff,
                                     high_frequency_cutoff, psd1.delta_f, N)
     f = frequencies[kmin:kmax]**(-7/3)
@@ -128,13 +132,14 @@ def sigmasq_twodet(psd1=None, psd2=None, low_frequency_cutoff=None, high_frequen
     except AssertionError:
         raise ValueError('delta_f are not matching between psd1, psd2')
 
-    sq = inner_product_twodet(f, f, psd1[kmin:kmax], psd2[kmin:kmax])
+    sq = inner_product_twodet(f, f, psd1[kmin:kmax], psd2[kmin:kmax],
+                              template1=template1[kmin:kmax], relative_amplification=relative_amplification)
 
     return sq.real * norm
 
 
-def matched_filter_twodet(data1, data2, psd1=None, psd2=None, low_frequency_cutoff=None,
-                  high_frequency_cutoff=None):
+def matched_filter_twodet(data1, data2, psd1=None, psd2=None, template1=None, relative_amplification=1.0,
+                           low_frequency_cutoff=None, high_frequency_cutoff=None):
 
     stilde1 = make_frequency_series(data1)
     stilde2 = make_frequency_series(data2)
@@ -164,14 +169,15 @@ def matched_filter_twodet(data1, data2, psd1=None, psd2=None, low_frequency_cuto
             raise ValueError("PSD delta_f does not match data")
 
         f = stilde1.sample_frequencies[kmin:kmax]**(-7/3)
-        qtilde[kmin:kmax] *= f/(psd1[kmin:kmax] * psd2[kmin:kmax])
+        qtilde[kmin:kmax] *= f/(variance_term(psd1[kmin:kmax], psd2[kmin:kmax],
+                                              template1[kmin:kmax], relative_amplification=relative_amplification).data)
     else:
         raise TypeError("PSD must be a FrequencySeries")
 
     fft(qtilde, _q)
 
-    norm_twodet = sigmasq_twodet(psd1, psd2, low_frequency_cutoff, high_frequency_cutoff)
+    norm_twodet = sigmasq_twodet(psd1, psd2, template1, relative_amplification, low_frequency_cutoff, high_frequency_cutoff)
 
-    norm = (8.0 * stilde2.delta_f**2) / sqrt(norm_twodet)
+    norm = (8.0 * stilde2.delta_f) / sqrt(norm_twodet)
 
     return TimeSeries(_q, epoch=stilde2._epoch, delta_t=stilde2.delta_t, copy=False) * norm
