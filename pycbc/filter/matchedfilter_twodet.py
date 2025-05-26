@@ -119,7 +119,7 @@ def inner_product_twodet(A, B, psd1, psd2, template1, relative_amplification):
     return numpy.sum(A.data.conj() * B.data / (variance_term(psd1, psd2, template1, relative_amplification).data), dtype=acum_dtype)
 
 
-def sigmasq_twodet(psd1=None, psd2=None, template1=None, relative_amplification=1.0, low_frequency_cutoff=None, high_frequency_cutoff=None):
+def sigmasq_twodet(template1=None, psd1=None, psd2=None, relative_amplification=1.0, low_frequency_cutoff=None, high_frequency_cutoff=None):
     template1 = make_frequency_series(template1)
     N = (len(psd1)-1) * 2
     norm = 8.0 * psd1.delta_f
@@ -136,7 +136,7 @@ def sigmasq_twodet(psd1=None, psd2=None, template1=None, relative_amplification=
 
     sq = inner_product_twodet(ttilde, ttilde, psd1[kmin:kmax], psd2[kmin:kmax],
                               template1=template1[kmin:kmax], relative_amplification=relative_amplification)
-
+    sq *= relative_amplification
     return sq.real * norm
 
 
@@ -174,12 +174,13 @@ def matched_filter_twodet(data1, data2, psd1=None, psd2=None, template1=None, re
         ttilde = numpy.abs(template1[kmin:kmax])**2
         qtilde[kmin:kmax] *= ttilde/(variance_term(psd1[kmin:kmax], psd2[kmin:kmax],
                                               template1[kmin:kmax], relative_amplification=relative_amplification).data)
+        qtilde[kmin:kmax] *= numpy.sqrt(relative_amplification)
     else:
         raise TypeError("PSD must be a FrequencySeries")
 
     fft(qtilde, _q)
 
-    norm_twodet = sigmasq_twodet(psd1, psd2, template1, relative_amplification, low_frequency_cutoff, high_frequency_cutoff)
+    norm_twodet = sigmasq_twodet(template1, psd1, psd2, relative_amplification, low_frequency_cutoff, high_frequency_cutoff)
 
     norm = (8.0 * stilde2.delta_f) / numpy.sqrt(norm_twodet)
 
