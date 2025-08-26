@@ -140,7 +140,7 @@ def sigmasq_twodet(template1=None, psd1=None, psd2=None, relative_amplification=
     return sq.real * norm
 
 
-def matched_filter_twodet(data1, data2, psd1=None, psd2=None, template1=None, relative_amplification=1.0,
+def matched_filter_twodet_core(data1, data2, psd1=None, psd2=None, template1=None, relative_amplification=1.0,
                            low_frequency_cutoff=None, high_frequency_cutoff=None):
 
     stilde1 = make_frequency_series(data1)
@@ -184,4 +184,16 @@ def matched_filter_twodet(data1, data2, psd1=None, psd2=None, template1=None, re
 
     norm = (8.0 * stilde2.delta_f) / numpy.sqrt(norm_twodet)
 
-    return TimeSeries(_q, epoch=stilde2._epoch, delta_t=stilde2.delta_t, copy=False) * norm
+    return (TimeSeries(_q, epoch=stilde2._epoch, delta_t=stilde2.delta_t, copy=False),
+           FrequencySeries(qtilde, epoch=stilde2._epoch, delta_f=stilde2.delta_f, copy=False),
+           norm)
+
+
+def matched_filter_twodet(data1, data2, psd1=None, psd2=None, template1=None, relative_amplification=1.0,
+                           low_frequency_cutoff=None, high_frequency_cutoff=None):
+
+    snr, _, norm = matched_filter_twodet_core(data1, data2, psd1=psd1, psd2=psd2,
+            template1=template1, relative_amplification=relative_amplification,
+            low_frequency_cutoff=low_frequency_cutoff,
+            high_frequency_cutoff=high_frequency_cutoff)
+    return snr * norm
