@@ -107,7 +107,7 @@ def variance_term(psd1, psd2, template1, relative_amplification):
     return term1 + term2
 
 
-def inner_product_twodet(A, B, psd1, psd2, template1, relative_amplification):
+def inner_product_AB(A, B, psd1, psd2, template1, relative_amplification):
     """ Return the inner product of the array with complex conjugation.
     """
     cdtype = common_kind(A.dtype, B.dtype)
@@ -134,10 +134,52 @@ def sigmasq_twodet(template1=None, psd1=None, psd2=None, relative_amplification=
     except AssertionError:
         raise ValueError('delta_f are not matching between psd1, psd2')
 
-    sq = inner_product_twodet(ttilde, ttilde, psd1[kmin:kmax], psd2[kmin:kmax],
+    sq = inner_product_AB(ttilde, ttilde, psd1[kmin:kmax], psd2[kmin:kmax],
                               template1=template1[kmin:kmax], relative_amplification=relative_amplification)
     sq *= relative_amplification
     return sq.real * norm
+
+
+def matched_filter_twodet_noslide(data1, data2, psd1=None, psd2=None, template1=None, relative_amplification=1.0,
+                         low_frequency_cutoff=None, high_frequency_cutoff=None):
+    stilde1 = make_frequency_series(data1)
+    stilde2 = make_frequency_series(data2)
+    template1 = make_frequency_series(template1)
+
+    if len(stilde1) != len(stilde2) or len(stilde1) != len(template1):
+        raise ValueError("Length of template and data must match")
+
+    N = (len(stilde2)-1) * 2
+    kmin, kmax = get_cutoff_indices(low_frequency_cutoff,
+                                   high_frequency_cutoff, stilde2.delta_f, N)
+
+    qtilde = zeros(N, dtype=complex_same_precision_as(data1))
+
+    correlate(stilde2[kmin:kmax], stilde1[kmin:kmax], qtilde[kmin:kmax])
+
+    if psd1 is None or psd2 is None:
+        raise ValueError("psd1 and/or psd2 is not provided")
+
+    if isinstance(psd1, FrequencySeries) and isinstance(psd2, FrequencySeries):
+        try:
+            numpy.testing.assert_almost_equal(stilde2.delta_f, psd1.delta_f)
+            numpy.testing.assert_almost_equal(stilde2.delta_f, psd2.delta_f)
+        except AssertionError:
+            raise ValueError("PSD delta_f does not match data")
+
+        ttilde = numpy.abs(template1[kmin:kmax])**2
+
+        out = inner_product_AB(ttilde, qtilde[kmin:kmax], psd1=psd1[kmin:kmax], psd2=psd2[kmin:kmax],
+                               template1=template1[kmin:kmax], relative_amplification=relative_amplification)
+        out *= numpy.sqrt(relative_amplification)
+    else:
+        raise TypeError("PSD must be a FrequencySeries")
+
+    norm_twodet = sigmasq_twodet(template1, psd1, psd2, relative_amplification, low_frequency_cutoff, high_frequency_cutoff)
+
+    norm = (8.0 * stilde2.delta_f) / numpy.sqrt(norm_twodet)
+
+    return norm * out
 
 
 def matched_filter_twodet_core(data1, data2, psd1=None, psd2=None, template1=None, relative_amplification=1.0,
