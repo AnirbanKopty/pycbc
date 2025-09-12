@@ -155,7 +155,7 @@ def matched_filter_twodet_noslide(data1, data2, psd1=None, psd2=None, template1=
 
     qtilde = zeros(N, dtype=complex_same_precision_as(data1))
 
-    correlate(stilde2[kmin:kmax], stilde1[kmin:kmax], qtilde[kmin:kmax])
+    correlate(stilde1[kmin:kmax], stilde2[kmin:kmax], qtilde[kmin:kmax])
 
     if psd1 is None or psd2 is None:
         raise ValueError("psd1 and/or psd2 is not provided")
@@ -201,7 +201,7 @@ def matched_filter_twodet_core(data1, data2, psd1=None, psd2=None, template1=Non
 
     _q = zeros(N, dtype=complex_same_precision_as(data1))
 
-    correlate(stilde2[kmin:kmax], stilde1[kmin:kmax], qtilde[kmin:kmax])
+    correlate(stilde1[kmin:kmax], stilde2[kmin:kmax], qtilde[kmin:kmax])
 
     if psd1 is None or psd2 is None:
         raise ValueError("psd1 and/or psd2 is not provided")
@@ -220,7 +220,7 @@ def matched_filter_twodet_core(data1, data2, psd1=None, psd2=None, template1=Non
     else:
         raise TypeError("PSD must be a FrequencySeries")
 
-    fft(qtilde, _q)
+    ifft(qtilde, _q)
 
     norm_twodet = sigmasq_twodet(template1, psd1, psd2, relative_amplification, low_frequency_cutoff, high_frequency_cutoff)
 
